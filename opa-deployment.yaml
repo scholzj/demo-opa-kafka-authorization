@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa
+  labels:
+    app: opa
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: strimzi-view
+  labels:
+    app: strimzi
+    # Add these permissions to the "view" default role.
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups:
+  - "kafka.strimzi.io"
+  resources:
+  - kafkas
+  - kafkaconnects
+  - kafkaconnects2is
+  - kafkamirrormakers
+  - kafkausers
+  - kafkatopics
+  - kafkabridges
+  - kafkaconnectors
+  - kafkamirrormaker2s
+  - kafkarebalances
+  verbs:
+  - get
+  - list
+  - watch
+---
+
+# Grant OPA/kube-mgmt read-only access to resources. This lets kube-mgmt
+# replicate resources into OPA so they can be used in policies.
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: opa-viewer
+  labels:
+    app: opa
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: opa
+    namespace: myproject
+---
+
+# Define role for OPA/kube-mgmt to update configmaps with policy status.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: configmap-modifier
+  labels:
+    app: opa
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["update", "patch"]
+---
+
+# Grant OPA/kube-mgmt role defined above.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: opa-configmap-modifier
+  labels:
+    app: opa
+roleRef:
+  kind: Role
+  name: configmap-modifier
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: opa
+    namespace: myproject
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  labels:
+    app: opa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+      name: opa
+    spec:
+      serviceAccountName: opa
+      containers:
+        - name: opa
+          image: openpolicyagent/opa:latest
+          ports:
+            - name: http
+              containerPort: 8181
+          args:
+            - "run"
+            - "--ignore=.*"  # exclude hidden dirs created by Kubernetes
+            - "--log-level=debug"
+            - "--server"
+            - "--set=decision_logs.console=true"
+            - "/policies"
+          volumeMounts:
+            - readOnly: true
+              mountPath: /policies
+              name: opa-policies
+        # - name: kube-mgmt
+        #   image: openpolicyagent/kube-mgmt:0.8
+        #   args:
+        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkas"
+        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkamirrormakers"
+        #     - "--replicate=kafka.strimzi.io/v1alpha1/kafkamirrormaker2s"
+        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkaconnects2is"
+        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkaconnects"
+        #     - "--replicate=kafka.strimzi.io/v1alpha1/kafkaconnectors"
+        #     - "--replicate=kafka.strimzi.io/v1alpha1/kafkabridges"
+        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkatopics"
+        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkausers"
+      volumes:
+        - name: opa-policies
+          configMap:
+            name: opa-policies
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: opa
+  labels:
+    app: opa
+spec:
+  selector:
+    app: opa
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8181
+      targetPort: 8181

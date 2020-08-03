@@ -1,0 +1,121 @@
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: my-topic
+  labels:
+      strimzi.io/cluster: my-cluster
+spec:
+  replicas: 3
+  partitions: 12
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: john
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: johns-producer
+  name: johns-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: johns-producer
+  template:
+    metadata:
+      labels:
+        app: johns-producer
+    spec:
+      containers:
+      - name: johns-producer
+        image: strimzi/hello-world-producer:latest
+        env:
+          - name: CA_CRT
+            valueFrom:
+              secretKeyRef:
+                name: my-cluster-cluster-ca-cert
+                key: ca.crt
+          - name: USER_CRT
+            valueFrom:
+              secretKeyRef:
+                name: john
+                key: user.crt
+          - name: USER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: john
+                key: user.key
+          - name: BOOTSTRAP_SERVERS
+            value: my-cluster-kafka-bootstrap:9093
+          - name: TOPIC
+            value: my-topic
+          - name: DELAY_MS
+            value: "1000"
+          - name: LOG_LEVEL
+            value: "INFO"
+          - name: MESSAGE_COUNT
+            value: "1000000"
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: matt
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: matts-consumer
+  name: matts-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matts-consumer
+  template:
+    metadata:
+      labels:
+        app: matts-consumer
+    spec:
+      containers:
+      - name: matts-consumer
+        image: strimzi/hello-world-consumer:latest
+        env:
+          - name: CA_CRT
+            valueFrom:
+              secretKeyRef:
+                name: my-cluster-cluster-ca-cert
+                key: ca.crt
+          - name: USER_CRT
+            valueFrom:
+              secretKeyRef:
+                name: matt
+                key: user.crt
+          - name: USER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: matt
+                key: user.key
+          - name: BOOTSTRAP_SERVERS
+            value: my-cluster-kafka-bootstrap:9093
+          - name: TOPIC
+            value: my-topic
+          - name: GROUP_ID
+            value: matts-group
+          - name: LOG_LEVEL
+            value: "INFO"
+          - name: MESSAGE_COUNT
+            value: "1000000"
