@@ -1,0 +1,128 @@
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: my-topic
+  annotations:
+    consumer-groups: '["consumers1", "consumers2"]'
+    producer-groups: '["producers1", "producers2"]'
+  labels:
+      strimzi.io/cluster: my-cluster
+spec:
+  replicas: 3
+  partitions: 12
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: joe
+  annotations:
+    groups: '["other-producers"]'
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: joes-producer
+  name: joes-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: joes-producer
+  template:
+    metadata:
+      labels:
+        app: joes-producer
+    spec:
+      containers:
+      - name: joes-producer
+        image: strimzi/hello-world-producer:latest
+        env:
+          - name: CA_CRT
+            valueFrom:
+              secretKeyRef:
+                name: my-cluster-cluster-ca-cert
+                key: ca.crt
+          - name: USER_CRT
+            valueFrom:
+              secretKeyRef:
+                name: joe
+                key: user.crt
+          - name: USER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: joe
+                key: user.key
+          - name: BOOTSTRAP_SERVERS
+            value: my-cluster-kafka-bootstrap:9093
+          - name: TOPIC
+            value: my-topic
+          - name: DELAY_MS
+            value: "1000"
+          - name: LOG_LEVEL
+            value: "INFO"
+          - name: MESSAGE_COUNT
+            value: "1000000"
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaUser
+metadata:
+  name: conor
+  annotations:
+    groups: '["other-consumers"]'
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  authentication:
+    type: tls
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: conors-consumer
+  name: conors-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: conors-consumer
+  template:
+    metadata:
+      labels:
+        app: conors-consumer
+    spec:
+      containers:
+      - name: conors-consumer
+        image: strimzi/hello-world-consumer:latest
+        env:
+          - name: CA_CRT
+            valueFrom:
+              secretKeyRef:
+                name: my-cluster-cluster-ca-cert
+                key: ca.crt
+          - name: USER_CRT
+            valueFrom:
+              secretKeyRef:
+                name: conor
+                key: user.crt
+          - name: USER_KEY
+            valueFrom:
+              secretKeyRef:
+                name: conor
+                key: user.key
+          - name: BOOTSTRAP_SERVERS
+            value: my-cluster-kafka-bootstrap:9093
+          - name: TOPIC
+            value: my-topic
+          - name: GROUP_ID
+            value: conors-group
+          - name: LOG_LEVEL
+            value: "INFO"
+          - name: MESSAGE_COUNT
+            value: "1000000"

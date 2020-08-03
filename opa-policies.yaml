@@ -63,9 +63,7 @@ data:
                                 }
 
           producer_operations = {
-                                  "Topic": ["Write", "Describe"],
-                                  "Cluster": ["IdempotentWrite"],
-                                  "TransactionalId": ["Write", "Describe"]
+                                  "Topic": ["Write", "Describe"]
                                 }
 
           admin_operations = {
@@ -112,24 +110,31 @@ data:
           }
 
           deny {
+            not allow_consumer_topic
             not allow_consumer_group
-            not allow_producer_group
-            not allow_admin_group
+            not allow_producer
+            not allow_admin
           }
 
-          allow_consumer_group {
+          allow_consumer_topic {
             is_topic_resource
             is_consumer_operation
             is_consumer_group
           }
 
-          allow_producer_group {
+          allow_consumer_group {
+            is_group_resource
+            is_consumer_operation
+            startswith(group_name, principal.name)
+          }
+
+          allow_producer {
             is_topic_resource
             is_producer_operation
             is_producer_group
           }
 
-          allow_admin_group {
+          allow_admin {
             is_admin_operation
             is_admin_group
           }
@@ -145,7 +150,7 @@ data:
           }
 
           is_producer_group {
-            user_groups(principal.name)[_] == topic_consumer_groups(topic_name)[_]
+            user_groups(principal.name)[_] == topic_producer_groups(topic_name)[_]
           }
 
           is_admin_group {
@@ -153,15 +158,15 @@ data:
           }
 
           user_groups(user) = groups {
-            groups := kafkausers[_][user].metadata.annotations["groups"]
+            groups := json.unmarshal(kafkausers[_][user].metadata.annotations["groups"])
           }
 
           topic_consumer_groups(topic) = groups {
-            groups := kafkatopics[_][topic].metadata.annotations["consumer-groups"]
+            groups := json.unmarshal(kafkatopics[_][topic].metadata.annotations["consumer-groups"])
           }
 
           topic_producer_groups(topic) = groups {
-            groups := kafkatopics[_][topic].metadata.annotations["producer-groups"]
+            groups := json.unmarshal(kafkatopics[_][topic].metadata.annotations["producer-groups"])
           }
 
           consumer_operations = {
@@ -170,16 +175,14 @@ data:
                                 }
 
           producer_operations = {
-                                  "Topic": ["Write", "Describe"],
-                                  "Cluster": ["IdempotentWrite"],
-                                  "TransactionalId": ["Write", "Describe"]
+                                  "Topic": ["Write", "Describe"]
                                 }
 
           admin_operations = {
-                                  "Topic": ["Read", "Write", "Create", "Delete", "Alter", "Describe", "ClusterAction", "DescribeConfigs", "AlterConfigs"], 
-                                  "Group": ["Read", "Write", "Create", "Delete", "Alter", "Describe", "ClusterAction", "DescribeConfigs", "AlterConfigs"],
-                                  "Cluster": ["Read", "Write", "Create", "Delete", "Alter", "Describe", "ClusterAction", "DescribeConfigs", "AlterConfigs", "IdempotentWrite"]
-                                }
+                               "Topic": ["Read", "Write", "Create", "Delete", "Alter", "Describe", "ClusterAction", "DescribeConfigs", "AlterConfigs"], 
+                               "Group": ["Read", "Write", "Create", "Delete", "Alter", "Describe", "ClusterAction", "DescribeConfigs", "AlterConfigs"],
+                               "Cluster": ["Read", "Write", "Create", "Delete", "Alter", "Describe", "ClusterAction", "DescribeConfigs", "AlterConfigs", "IdempotentWrite"]
+                             }
 
           is_consumer_operation {
             consumer_operations[input.resource.resourceType.name][_] == input.operation.name
@@ -203,6 +206,14 @@ data:
 
           topic_name = input.resource.name {
               is_topic_resource
+          }
+
+          is_group_resource {
+            input.resource.resourceType.name == "Group"
+          }
+
+          group_name = input.resource.name {
+              is_group_resource
           }
 
           principal = {"fqn": parsed.CN, "name": cn_parts[0]} {

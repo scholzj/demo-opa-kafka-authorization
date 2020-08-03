@@ -117,18 +117,18 @@ spec:
             - readOnly: true
               mountPath: /policies
               name: opa-policies
-        # - name: kube-mgmt
-        #   image: openpolicyagent/kube-mgmt:0.8
-        #   args:
-        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkas"
-        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkamirrormakers"
-        #     - "--replicate=kafka.strimzi.io/v1alpha1/kafkamirrormaker2s"
-        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkaconnects2is"
-        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkaconnects"
-        #     - "--replicate=kafka.strimzi.io/v1alpha1/kafkaconnectors"
-        #     - "--replicate=kafka.strimzi.io/v1alpha1/kafkabridges"
-        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkatopics"
-        #     - "--replicate=kafka.strimzi.io/v1beta1/kafkausers"
+        - name: kube-mgmt
+          image: openpolicyagent/kube-mgmt:0.8
+          args:
+            - "--replicate=kafka.strimzi.io/v1beta1/kafkas"
+            - "--replicate=kafka.strimzi.io/v1beta1/kafkamirrormakers"
+            - "--replicate=kafka.strimzi.io/v1alpha1/kafkamirrormaker2s"
+            - "--replicate=kafka.strimzi.io/v1beta1/kafkaconnects2is"
+            - "--replicate=kafka.strimzi.io/v1beta1/kafkaconnects"
+            - "--replicate=kafka.strimzi.io/v1alpha1/kafkaconnectors"
+            - "--replicate=kafka.strimzi.io/v1alpha1/kafkabridges"
+            - "--replicate=kafka.strimzi.io/v1beta1/kafkatopics"
+            - "--replicate=kafka.strimzi.io/v1beta1/kafkausers"
       volumes:
         - name: opa-policies
           configMap:
