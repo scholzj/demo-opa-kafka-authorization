@@ -17,11 +17,12 @@ You can use any of the available methods.
 
 ## Deploy OPA
 
-The OPA policies used for both examples mentioned int he blog post are deployed using a ConfigMap [`opa-policies.yaml`](./opa-policies.yaml).
-You can create them using `kubectl`:
+The OPA policies used for both examples are part of this repository.
+To make them available to the OPA server, we create a config map from them and mount this config map as a volume into OPA server.
+You can create the config map using `kubectl`:
 
 ```
-kubectl apply -f opa-policies.yaml
+kubectl create configmap opa-policies --from-file=kafka_authz_example_basic.rego=basic-example-policy.rego --from-file=kafka_authz_example_crds.rego=advanced-example-policy.rego
 ```
 
 The [`opa-deployment.yaml`](./opa-deployment.yaml) contains the deployment of the OPA server.
