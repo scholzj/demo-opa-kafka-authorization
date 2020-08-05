@@ -69,6 +69,10 @@ topic_producer_groups(topic) = groups {
     groups := json.unmarshal(kafkatopics[_][topic].metadata.annotations["producer-groups"])
 }
 
+###############################################################################
+# Operations and their helper rules
+###############################################################################
+
 consumer_operations = {
                         "Topic": ["Read", "Describe"], 
                         "Group": ["Read", "Describe"]

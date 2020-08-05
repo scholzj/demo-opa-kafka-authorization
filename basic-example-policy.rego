@@ -28,16 +28,12 @@ allow_admin_group {
 }
 
 ###############################################################################
-# Example groups hardcoded in the policy
+# Groups and their helper rules
 ###############################################################################
 
 consumer_group = ["tom", "tyrone", "matt", "pepe", "douglas"]
 producer_group = ["jack", "conor", "keinan", "john"]
 admin_group = ["dean", "christian"]
-
-###############################################################################
-# Helper rules for checking the groups
-###############################################################################
 
 is_consumer_group {
     consumer_group[_] == principal.name
@@ -50,6 +46,10 @@ is_producer_group {
 is_admin_group {
     admin_group[_] == principal.name
 }
+
+###############################################################################
+# Operations and their helper rules
+###############################################################################
 
 consumer_operations = {
                         "Topic": ["Read", "Describe"], 
