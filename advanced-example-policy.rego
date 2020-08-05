@@ -45,16 +45,16 @@ allow_admin {
 
 admin_groups := ["admin"]
 
+is_admin_group {
+    user_groups(principal.name)[_] == admin_groups[_]
+}
+
 is_consumer_group {
     user_groups(principal.name)[_] == topic_consumer_groups(topic_name)[_]
 }
 
 is_producer_group {
     user_groups(principal.name)[_] == topic_producer_groups(topic_name)[_]
-}
-
-is_admin_group {
-    user_groups(principal.name)[_] == admin_groups[_]
 }
 
 user_groups(user) = groups {
